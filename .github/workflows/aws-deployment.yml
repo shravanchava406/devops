@@ -1,0 +1,71 @@
+name: AWS EC2 Deployment
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches:
+      - main
+    paths:
+      - 'AWS/**'
+
+env:
+  # AWS Configuration
+  AWS_CLI_KEY_ID: ${{ secrets.AWS_CLI_KEY_ID }}
+  AWS_CLI_KEY_SECRET: ${{ secrets.AWS_CLI_KEY_SECRET }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  
+  # EC2 Configuration
+  AWS_EC2_US_EAST_1_AMI_BASE_LINUX_X86_64_ID: ${{ secrets.AWS_EC2_US_EAST_1_AMI_BASE_LINUX_X86_64_ID }}
+  AWS_EC2_INSTANCE_COUNT: ${{ secrets.AWS_EC2_INSTANCE_COUNT }}
+  AWS_EC2_INSTANCE_TYPE: ${{ secrets.AWS_EC2_INSTANCE_TYPE }}
+  AWS_EC2_INSTANCE_NAME: ${{ secrets.AWS_EC2_INSTANCE_NAME }}
+  AWS_EC2_KEY_PAIR_NAME: ${{ secrets.AWS_EC2_KEY_PAIR_NAME }}
+  AWS_EC2_SECURITY_GROUPS: ${{ secrets.AWS_EC2_SECURITY_GROUPS }}
+
+jobs:
+  deploy-aws-ec2:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install AWS CLI v2
+      run: |
+        chmod +x ./AWS/cli/install-aws-cli-linux.sh
+        ./AWS/cli/install-aws-cli-linux.sh
+
+    - name: Configure AWS CLI
+      run: |
+        chmod +x ./AWS/configure/configure-aws-cli.sh
+        ./AWS/configure/configure-aws-cli.sh
+
+    - name: Create EC2 Key Pair
+      run: |
+        chmod +x ./AWS/ec2/create-key-pair-gh.sh
+        ./AWS/ec2/create-key-pair-gh.sh
+
+    - name: Create EC2 Instance
+      run: |
+        chmod +x ./AWS/ec2/create-ec2-instance-gh.sh
+        ./AWS/ec2/create-ec2-instance-gh.sh
+
+    - name: Store Key Pair (Optional)
+      if: always()
+      run: |
+        # Store the key pair as an artifact (optional, for debugging)
+        if [ -f "$AWS_EC2_KEY_PAIR_NAME.pem" ]; then
+          echo "Key pair file created and available for this session"
+          # Note: For security, avoid uploading private keys as artifacts in production
+          # This step is just for verification that the file was created
+          ls -la *.pem
+        fi
+
+    - name: Cleanup (Optional)
+      if: always()
+      run: |
+        # Clean up sensitive files
+        if [ -f "$AWS_EC2_KEY_PAIR_NAME.pem" ]; then
+          rm -f $AWS_EC2_KEY_PAIR_NAME.pem
+          echo "Cleaned up key pair file from runner"
+        fi
