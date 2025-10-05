@@ -1,0 +1,4 @@
+.env
+cli-key-pair1.pem
+NewConsoleKeyPair.pem
+.DS_Store
