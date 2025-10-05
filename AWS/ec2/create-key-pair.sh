@@ -1,4 +1,4 @@
-ehco "Initializing environment variables"
+echo "Initializing environment variables"
 source /Users/shrushra/Desktop/devops/AWS/.env
 
 echo "Creating Key Pairs"
