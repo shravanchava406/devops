@@ -32,83 +32,23 @@ jobs:
     
     - name: Install AWS CLI v2
       run: |
-        echo "Installing AWS CLI v2..."
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
-        
-        echo "Verifying AWS CLI installation..."
-        echo "--------------------------------"
-        echo "AWS CLI INSTALLATION PATH:"
-        which aws
-        echo "--------------------------------"
-        echo "AWS CLI VERSION:"
-        aws --version
+        chmod +x ./AWS/cli/install-aws-cli-linux.sh
+        ./AWS/cli/install-aws-cli-linux.sh
 
     - name: Configure AWS CLI
       run: |
-        echo "Configuring AWS CLI with provided credentials and region..."
-        aws configure set aws_access_key_id $AWS_CLI_KEY_ID
-        aws configure set aws_secret_access_key $AWS_CLI_KEY_SECRET
-        aws configure set region $AWS_REGION
-        aws configure set output json
-        
-        echo "AWS CLI configured successfully."
-        echo "Current AWS configuration:"
-        aws configure list
+        chmod +x ./AWS/configure/configure-aws-cli.sh
+        ./AWS/configure/configure-aws-cli.sh
 
     - name: Create EC2 Key Pair
       run: |
-        echo "Creating Key Pairs..."
-        
-        # Check if key pair already exists
-        if aws ec2 describe-key-pairs --key-name $AWS_EC2_KEY_PAIR_NAME 2>/dev/null; then
-          echo "Key pair $AWS_EC2_KEY_PAIR_NAME already exists. Skipping creation."
-        else
-          echo "Creating new key pair: $AWS_EC2_KEY_PAIR_NAME"
-          aws ec2 create-key-pair --key-name $AWS_EC2_KEY_PAIR_NAME --query 'KeyMaterial' --output text > $AWS_EC2_KEY_PAIR_NAME.pem
-          
-          echo "Updating permissions on .pem file"
-          chmod 400 $AWS_EC2_KEY_PAIR_NAME.pem
-          
-          echo "Key pair created successfully."
-        fi
-        
-        echo "Listing the details for key pair:"
-        aws ec2 describe-key-pairs --key-name $AWS_EC2_KEY_PAIR_NAME
+        chmod +x ./AWS/ec2/create-key-pair-gh.sh
+        ./AWS/ec2/create-key-pair-gh.sh
 
     - name: Create EC2 Instance
       run: |
-        echo "Creating EC2 Instance with all the required Parameters..."
-        
-        # Check if instance with the same name already exists and is running
-        EXISTING_INSTANCE=$(aws ec2 describe-instances \
-          --filters "Name=tag:Name,Values=$AWS_EC2_INSTANCE_NAME" "Name=instance-state-name,Values=running,pending" \
-          --query 'Reservations[*].Instances[*].InstanceId' \
-          --output text)
-        
-        if [ ! -z "$EXISTING_INSTANCE" ]; then
-          echo "Instance with name $AWS_EC2_INSTANCE_NAME already exists and is running: $EXISTING_INSTANCE"
-          echo "Skipping instance creation."
-        else
-          echo "Creating new EC2 instance..."
-          INSTANCE_RESULT=$(aws ec2 run-instances \
-            --image-id $AWS_EC2_US_EAST_1_AMI_BASE_LINUX_X86_64_ID \
-            --count $AWS_EC2_INSTANCE_COUNT \
-            --instance-type $AWS_EC2_INSTANCE_TYPE \
-            --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$AWS_EC2_INSTANCE_NAME}]" \
-            --key-name $AWS_EC2_KEY_PAIR_NAME \
-            --security-group-ids $AWS_EC2_SECURITY_GROUPS)
-          
-          INSTANCE_ID=$(echo $INSTANCE_RESULT | jq -r '.Instances[0].InstanceId')
-          echo "EC2 Instance created successfully with ID: $INSTANCE_ID"
-          
-          echo "Waiting for instance to be in running state..."
-          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
-          
-          echo "Instance is now running. Getting instance details..."
-          aws ec2 describe-instances --instance-ids $INSTANCE_ID
-        fi
+        chmod +x ./AWS/ec2/create-ec2-instance-gh.sh
+        ./AWS/ec2/create-ec2-instance-gh.sh
 
     - name: Store Key Pair (Optional)
       if: always()
